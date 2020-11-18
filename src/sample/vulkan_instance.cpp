@@ -284,7 +284,7 @@ void VulkanInstance::PickPhysicalDevice(std::vector<const char*> deviceExtension
 }
 
 VulkanDevice* VulkanInstance::CreateDevice(QueueFlagBits requiredQueues) {
-    std::set<int> uniqueQueueFamilies;
+    std::set<unsigned int> uniqueQueueFamilies;
     bool queueSupport = true;
     for (unsigned int i = 0; i < requiredQueues.size(); ++i) {
         if (requiredQueues[i]) {
@@ -299,7 +299,7 @@ VulkanDevice* VulkanInstance::CreateDevice(QueueFlagBits requiredQueues) {
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     float queuePriority = 1.0f;
-    for (int queueFamily : uniqueQueueFamilies) {
+    for (unsigned int queueFamily : uniqueQueueFamilies) {
         VkDeviceQueueCreateInfo queueCreateInfo = {};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -345,6 +345,19 @@ VulkanDevice* VulkanInstance::CreateDevice(QueueFlagBits requiredQueues) {
     }
 
     return new VulkanDevice(this, vkDevice, queues);
+}
+
+uint32_t VulkanInstance::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("failed to find suitable memory type!");
 }
 
 VulkanInstance::~VulkanInstance() {

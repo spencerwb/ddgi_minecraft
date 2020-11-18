@@ -20,6 +20,7 @@ public:
     const VkSurfaceCapabilitiesKHR& GetSurfaceCapabilities() const;
     const std::vector<VkSurfaceFormatKHR>& GetSurfaceFormats() const;
     const std::vector<VkPresentModeKHR>& GetPresentModes() const;
+    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     
     uint32_t GetMemoryTypeIndex(uint32_t types, VkMemoryPropertyFlags properties) const;
 

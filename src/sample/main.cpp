@@ -586,6 +586,51 @@ int main(int argc, char** argv) {
         vkUpdateDescriptorSets(device->GetVulkanDevice(), 3, writeDescriptorSets, 0, nullptr);
     }
 
+    ////////// CREATE TEXTURE ///////////
+    // based off : https://github.com/SaschaWillems/Vulkan/blob/master/examples/computeshader/computeshader.cpp
+    ////////////////////////////////////
+
+    const unsigned int texWidth = SCREEN_WIDTH;
+    const unsigned int texHeight = SCREEN_HEIGHT;
+
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+
+    VkImageCreateInfo imageCreateInfo{};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.extent.width = static_cast<uint32_t>(texWidth);
+    imageCreateInfo.extent.height = static_cast<uint32_t>(texHeight);
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = 1;
+    imageCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    imageCreateInfo.flags = 0;
+    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateImage(device->GetVulkanDevice(), &imageCreateInfo, nullptr, &textureImage) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device->GetVulkanDevice(), textureImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = instance->FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if (vkAllocateMemory(device->GetVulkanDevice(), &allocInfo, nullptr, &textureImageMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate image memory!");
+    }
+
+    vkBindImageMemory(device->GetVulkanDevice(), textureImage, textureImageMemory, 0);
+    
+    /////////////////////////////////////
+
     VkRenderPass renderPass = CreateRenderPass();
     VkPipelineLayout computePipelineLayout = CreatePipelineLayout({ computeSetLayout, cameraSetLayout, modelSetLayout });
     VkPipelineLayout graphicsPipelineLayout = CreatePipelineLayout({});
@@ -725,6 +770,8 @@ int main(int argc, char** argv) {
     vkDeviceWaitIdle(device->GetVulkanDevice());
 
     delete camera;
+
+    vkDestroyImage(device->GetVulkanDevice(), textureImage, nullptr);
 
     vkDestroyBuffer(device->GetVulkanDevice(), vertexBuffer, nullptr);
     vkDestroyBuffer(device->GetVulkanDevice(), indexBuffer, nullptr);

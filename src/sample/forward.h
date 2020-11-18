@@ -18,7 +18,7 @@ enum QueueFlagBit {
 };
 
 using QueueFlagBits = std::bitset<sizeof(QueueFlags)>;
-using QueueFamilyIndices = std::array<int, sizeof(QueueFlags)>;
+using QueueFamilyIndices = std::array<unsigned int, sizeof(QueueFlags)>;
 
 class VulkanInstance;
 class VulkanDevice;
