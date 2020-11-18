@@ -1,16 +1,50 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-
-struct Vertex {
-    vec4 position;
-	vec4 color;
-};
+#include "structs.glsl"
 
 layout(set = 0, binding = 0) buffer Vertices {
 	Vertex vertices[];
 };
 
+layout(set = 1, binding = 0) uniform CameraUBO {
+	mat4 viewMatrix;
+	mat4 projectionMatrix;
+	mat4 camMatrix;
+	vec4 params; /* aspect, hfov, scale, 0 */
+} cam;
+
+layout(set = 2, binding = 0) uniform ModelUBO {
+	mat4 modelMatrix;
+};
+
+Ray camera_cast_ray (float x,    /* x coordinate in [0, 1] */
+	                 float y)    /* y coordinate in [0, 1] */
+{
+	float aspect = cam.params.x;
+	float hfov = cam.params.y;
+	float u = aspect * (2.0 * x - 1.0);
+	float v = 2.0 * y - 1.0;
+	float w = 1.0 / tan(0.5 * hfov);
+
+    vec3 origin = cam.camMatrix[3].xyz;
+    vec3 direction = (cam.camMatrix * vec4(u, v, w, 0.0)).xyz;
+    return Ray(origin, normalize(direction));
+} /* camera_pinhole_ray */
+
+
 void main() {
+	vec2 coord = vec2(gl_GlobalInvocationID.xy);
+	coord.y = 1.0-coord.y; /* flip image vertically */
+
+	Ray r = camera_cast_ray(coord.x, coord.y);
+
+	// calculate where this ray intersects <----
+
+	// from this intersection, we would either cast more rays / bounce more times
+	// and then calculate lighting
+
+	// we save color value to texture to render in frag shader
+
 /*
 	uint index = gl_GlobalInvocationID.x;
 	const float a = 0.05 * 3.14159 / 180.0;

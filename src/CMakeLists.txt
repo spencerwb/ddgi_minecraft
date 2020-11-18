@@ -7,6 +7,15 @@ function(buildSample SAMPLE_NAME)
     ${SAMPLE_NAME}/*.comp
     ${SAMPLE_NAME}/*.tese
     ${SAMPLE_NAME}/*.tesc
+    ${SAMPLE_NAME}/*.glsl
+  )
+  file(GLOB_RECURSE COMPILE_SHADERS
+    ${SAMPLE_NAME}/*.vert
+    ${SAMPLE_NAME}/*.frag
+    ${SAMPLE_NAME}/*.geom
+    ${SAMPLE_NAME}/*.comp
+    ${SAMPLE_NAME}/*.tese
+    ${SAMPLE_NAME}/*.tesc
   )
 
   source_group("Shaders" FILES ${SHADER_SOURCES})
@@ -19,13 +28,13 @@ function(buildSample SAMPLE_NAME)
     target_link_libraries(${SAMPLE_NAME} ${CMAKE_THREAD_LIBS_INIT})
   endif(WIN32)
 
-  foreach(SHADER_SOURCE ${SHADER_SOURCES})
+  foreach(SHADER_SOURCE ${COMPILE_SHADERS})
   set(SHADER_DIR ${CMAKE_CURRENT_BINARY_DIR}/${SAMPLE_NAME}/shaders)
     if(WIN32)
       get_filename_component(fname ${SHADER_SOURCE} NAME)
 	  add_custom_target(${SAMPLE_NAME}_${fname}.spv
 	    COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_DIR} &&
-	    $ENV{VK_SDK_PATH}/Bin/glslangValidator.exe -V ${SHADER_SOURCE} -o ${SHADER_DIR}/${fname}.spv
+	    $ENV{VK_SDK_PATH}/Bin/glslc.exe ${SHADER_SOURCE} -o ${SHADER_DIR}/${fname}.spv
 		SOURCES ${SHADER_SOURCE}
 	  )
 	  ExternalTarget("Shaders" ${SAMPLE_NAME}_${fname}.spv)

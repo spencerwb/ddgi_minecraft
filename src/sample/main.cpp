@@ -9,6 +9,9 @@
 #include "camera.h"
 #include <iostream>
 
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 800
+
 VulkanInstance* instance;
 VulkanDevice* device;
 VulkanSwapChain* swapchain;
@@ -57,6 +60,8 @@ struct Vertex {
 struct CameraUBO {
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
+    glm::mat4 camMatrix;
+    glm::vec4 params;
 };
 
 struct ModelUBO {
@@ -379,7 +384,7 @@ std::vector<VkFramebuffer> CreateFrameBuffers(VkRenderPass renderPass) {
 
 int main(int argc, char** argv) {
     static constexpr char* applicationName = "Hello Compute";
-    InitializeWindow(640, 480, applicationName);
+    InitializeWindow(SCREEN_WIDTH, SCREEN_HEIGHT, applicationName);
 
     unsigned int glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -407,8 +412,10 @@ int main(int argc, char** argv) {
     }
 
     CameraUBO cameraTransforms;
-    camera = new Camera(&cameraTransforms.viewMatrix);
-    cameraTransforms.projectionMatrix = glm::perspective(static_cast<float>(45 * M_PI / 180), 640.f / 480.f, 0.1f, 1000.f);
+    camera = new Camera(&cameraTransforms.viewMatrix, SCREEN_WIDTH, SCREEN_HEIGHT, 45.f, 0.1f, 1000.f);
+    cameraTransforms.projectionMatrix = camera->getPerspectiveMatrix();
+    cameraTransforms.params = glm::vec4(camera->getAspectRatio(), camera->getFOV(), 0.f, 0.f);
+    cameraTransforms.camMatrix = camera->getCamMatrix();
 
     ModelUBO modelTransforms;
     modelTransforms.modelMatrix = glm::rotate(glm::mat4(1.f), static_cast<float>(15 * M_PI / 180), glm::vec3(0.f, 0.f, 1.f));
@@ -522,11 +529,11 @@ int main(int argc, char** argv) {
     });
 
     VkDescriptorSetLayout cameraSetLayout = CreateDescriptorSetLayout({
-        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
     });
 
     VkDescriptorSetLayout modelSetLayout = CreateDescriptorSetLayout({
-        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+        { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
     });
 
     VkDescriptorSet computeSet = CreateDescriptorSet(descriptorPool, computeSetLayout);
@@ -580,8 +587,8 @@ int main(int argc, char** argv) {
     }
 
     VkRenderPass renderPass = CreateRenderPass();
-    VkPipelineLayout computePipelineLayout = CreatePipelineLayout({ computeSetLayout });
-    VkPipelineLayout graphicsPipelineLayout = CreatePipelineLayout({ cameraSetLayout, modelSetLayout });
+    VkPipelineLayout computePipelineLayout = CreatePipelineLayout({ computeSetLayout, cameraSetLayout, modelSetLayout });
+    VkPipelineLayout graphicsPipelineLayout = CreatePipelineLayout({});
     VkPipeline computePipeline = CreateComputePipeline(computePipelineLayout);
     VkPipeline graphicsPipeline = CreateGraphicsPipeline(graphicsPipelineLayout, renderPass, 0);
 
@@ -628,8 +635,14 @@ int main(int argc, char** argv) {
         // Bind descriptor sets for compute
         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeSet, 0, nullptr);
 
+        // Bind camera descriptor set
+        vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 1, 1, &cameraSet, 0, nullptr);
+
+        // Bind model descriptor set
+        vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 2, 1, &modelSet, 0, nullptr);
+
         // Dispatch the compute kernel, with one thread for each vertex
-        vkCmdDispatch(commandBuffers[i], vertices.size(), 1, 1);
+        vkCmdDispatch(commandBuffers[i], SCREEN_WIDTH * SCREEN_HEIGHT, 1, 1);
 
         // Define a memory barrier to transition the vertex buffer from a compute storage object to a vertex input
         VkBufferMemoryBarrier computeToVertexBarrier = {};
@@ -652,14 +665,8 @@ int main(int argc, char** argv) {
 
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        // Bind camera descriptor set
-        vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout, 0, 1, &cameraSet, 0, nullptr);
-
         // Bind the graphics pipeline
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-        // Bind model descriptor set
-        vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout, 1, 1, &modelSet, 0, nullptr);
 
         VkDeviceSize offsets[1] = { 0 };
         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, offsets);

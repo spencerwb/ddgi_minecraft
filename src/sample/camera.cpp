@@ -1,13 +1,19 @@
 #include "camera.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-Camera::Camera(glm::mat4* view)
+Camera::Camera(glm::mat4* view, float width, float height, float fov, float near, float far)
     : _azimuth(glm::radians(-90.f)),
     _altitude(glm::radians(0.f)),
     _radius(5.f),
     _center(0, 0, 0),
     _dirty(true),
-    _view(*view) {
+    _view(*view), 
+    _width(width),
+    _height(height),
+    _fov(fov),
+    _near(near),
+    _far(far)
+{
     recalculate();
 }
 
@@ -48,4 +54,20 @@ void Camera::recalculate() {
         _view = glm::lookAt(_center + _eyeDir * _radius, _center, glm::vec3(0, 1, 0));
         _dirty = false;
     }
+}
+
+glm::mat4 Camera::getPerspectiveMatrix() {
+    return glm::perspective(static_cast<float>(getFOV() * M_PI / 180), getAspectRatio(), _near, _far);
+}
+
+float Camera::getAspectRatio() {
+    return _width / _height;
+}
+
+float Camera::getFOV() {
+    return _fov;
+}
+
+glm::mat4 Camera::getCamMatrix() {
+    return glm::inverse(_view);
 }
