@@ -8,6 +8,7 @@
 #include "vulkan_buffer.h"
 #include "camera.h"
 #include <iostream>
+#include "cube.h"
 
 VulkanInstance* instance;
 VulkanDevice* device;
@@ -475,6 +476,46 @@ int main(int argc, char** argv) {
                                           // left face
                                           20, 21, 22,
                                           20, 22, 23 };
+
+
+    vertices.clear();
+    indices.clear();
+
+    Cube cube = Cube();
+
+    for (int j = 0; j < 4; j++) {
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 t = glm::mat4(1.0, 0.0, 0.0, 0.0,  // 1. column
+                0.0, 1.0, 0.0, 0.0,  // 2. column
+                0.0, 0.0, 1.0, 0.0,  // 3. column
+                i, 0, j, 1.0); // 4. column
+            Cube temp = cube.translate(t);
+            for (int k = 0; k < temp.pos.size(); k++) {
+                vertices.push_back({ temp.pos[k], temp.col[k] });
+            }
+            int indSize = indices.size();
+            for (int k = 0; k < temp.ind.size(); k++) {
+                indices.push_back(temp.ind[k] + indSize);
+            }
+        }
+    }
+
+    for (int j = 0; j < 4; j++) {
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 t = glm::mat4(1.0, 0.0, 0.0, 0.0,  // 1. column
+                0.0, 1.0, 0.0, 0.0,  // 2. column
+                0.0, 0.0, 1.0, 0.0,  // 3. column
+                4, i, j, 1.0); // 4. column
+            Cube temp = cube.translate(t);
+            for (int k = 0; k < temp.pos.size(); k++) {
+                vertices.push_back({ temp.pos[k], temp.col[k] });
+            }
+            int indSize = indices.size();
+            for (int k = 0; k < temp.ind.size(); k++) {
+                indices.push_back(temp.ind[k] + indSize);
+            }
+        }
+    }
 
     unsigned int vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(vertices[0]));
     unsigned int indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(indices[0]));
