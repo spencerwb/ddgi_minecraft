@@ -628,7 +628,48 @@ int main(int argc, char** argv) {
     }
 
     vkBindImageMemory(device->GetVulkanDevice(), textureImage, textureImageMemory, 0);
+
+    // Create the command buffer for this texture
+
+    VkCommandBufferAllocateInfo bufferAllocInfo{};
+    bufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    bufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    bufferAllocInfo.commandPool = commandPool;
+    bufferAllocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer texCommandBuffer;
+    vkAllocateCommandBuffers(device->GetVulkanDevice(), &bufferAllocInfo, &texCommandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(texCommandBuffer, &beginInfo);
     
+    /*VkImageMemoryBarrier imageMemoryBarrier{};
+    imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imageMemoryBarrier.image = textureImage;
+    imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+    imageMemoryBarrier.subresourceRange.levelCount = 1;
+    imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+    imageMemoryBarrier.subresourceRange.layerCount = 1;
+    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;*/
+
+    vkEndCommandBuffer(texCommandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &texCommandBuffer;
+
+    vkQueueSubmit(device->GetQueue(QueueFlags::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(device->GetQueue(QueueFlags::Graphics));
+
+    vkFreeCommandBuffers(device->GetVulkanDevice(), commandPool, 1, &texCommandBuffer);
+
     /////////////////////////////////////
 
     VkRenderPass renderPass = CreateRenderPass();
