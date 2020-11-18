@@ -41,4 +41,4 @@ function(buildSample SAMPLE_NAME)
   )
 endfunction(buildSample)
 
-buildSample(ddgi_main)
+buildSample(sample)
